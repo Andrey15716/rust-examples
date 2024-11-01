@@ -1,12 +1,13 @@
 use std::convert::TryFrom;
+use std::fmt::{Debug, Display, Formatter};
+use std::{fmt, str};
 use std::error::Error;
-use std::fmt::{Debug, Display};
-use std::str;
 use std::str::Utf8Error;
 
 use super::method::{Method, MethodError};
 use super::QueryString;
 
+#[derive(Debug)]
 pub struct Request<'buf> {
     path: &'buf str,
     query_string: Option<QueryString<'buf>>,
@@ -33,12 +34,11 @@ impl<'buf> TryFrom<&'buf [u8]> for Request<'buf> {
             path = &path[..i];
         }
 
-        Ok(Self {
+        Ok::<Request<'buf>, ParseError>(Self {
             path,
             query_string,
             method,
-        })
-        .unwrap();
+        });
 
         unimplemented!()
     }
@@ -87,26 +87,28 @@ impl ParseError {
     }
 }
 
-// impl Display for ParseError {
-//     fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
-//         write!(fmt.buf, "{}", self.message)
-//     }
-// }
-//
-// impl Debug for ParseError {
-//     fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
-//         write!(fmt.buf, "{}", self.message)
-//     }
-// }
+impl Display for ParseError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message())
+    }
+}
+
+impl Debug for ParseError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message())
+    }
+}
+
+impl Error for ParseError {}
 
 impl From<MethodError> for ParseError {
     fn from(_: MethodError) -> Self {
         Self::InvalidMethod
     }
 }
+
 impl From<Utf8Error> for ParseError {
     fn from(_: Utf8Error) -> Self {
         Self::InvalidEncoding
     }
 }
-impl Error for ParseError {}
